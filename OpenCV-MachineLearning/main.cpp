@@ -1,4 +1,4 @@
-/**
+﻿/**
  * @file objectDetection.cpp
  * @author A. Huaman ( based in the classic facedetect.cpp in samples/c )
  * @brief A simplified version of facedetect.cpp, show how to load a cascade classifier and how to find objects (Face + eyes) in a video stream
@@ -35,11 +35,23 @@ void Display( const vector<Rect> &rect, Mat &frame)
    imshow( window_name, frame );
 }
 
+void Display( const vector< pair<Point2i,Point2i> > &iris, Mat &frame)
+{
+	for( size_t i = 0; i < iris.size(); i++ )
+    {
+		ellipse( frame, iris[i].first , Size(10,10), 0, 0, 360, Scalar( 255, 0, 255 ), 2, 8, 0 );
+		ellipse( frame, iris[i].second , Size(10,10), 0, 0, 360, Scalar( 255, 0, 255 ), 2, 8, 0 );
+    }
+   imshow( window_name, frame );
+}
+
+
 int main( void )
 {
   VideoCapture capture;
   Mat frame;
-  CascadeFeatureExtractor myExtractor("D:\\Osama\\Programming\\OpenCV\\opencv\\sources\\data\\haarcascades\\haarcascade_frontalface_alt.xml");
+  EyeIrisDetector myIrisDetector;
+  CascadeFeatureExtractor faceExt("D:\\Osama\\Programming\\OpenCV\\opencv\\sources\\data\\haarcascades\\haarcascade_frontalface_alt.xml");
 
   capture.open( 0 );
   if( capture.isOpened() )
@@ -48,8 +60,13 @@ int main( void )
     {
       capture >> frame;
       //Apply the classifier to the frame
-	  myExtractor.ExtractFaces(frame);
-	  if( !frame.empty() )  { Display(myExtractor.featureWindows, frame); }
+	  myIrisDetector.ExtractIris(frame);
+	  faceExt.ExtractFaces(frame);
+	  if( !frame.empty() )  
+	  {
+		  Display(myIrisDetector.iris, frame); 
+		  Display(faceExt.featureWindows, frame); 
+	  }
       else { printf(" --(!) No captured frame -- Break!"); break; }
       int c = waitKey(10);
       if( (char)c == 'c' ) { break; }

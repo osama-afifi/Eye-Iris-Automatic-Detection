@@ -19,7 +19,7 @@ class EyeIrisDetector
 private:
 	vector<Rect>faces;
 	int colorFreq[256 + 5];
-	const int WINDOWS_THRESHOLD = 50;
+	#define WINDOWS_THRESHOLD 50
 
 	struct Window
 	{
@@ -42,7 +42,7 @@ public:
 	EyeIrisDetector()
 	{}
 
-	vector< pair<Point2d,Point2d> >iris;
+	vector< pair<Point2i,Point2i> >iris;
 
 	void ExtractIris(Mat &img)
 	{
@@ -52,7 +52,7 @@ public:
 		iris.clear();
 		for(int i = 0 ; i<faces.size() ; i++)
 		{
-			vector<Window> &bestWindows = getBestWindows(faces[i],img);
+			vector<Window> bestWindows = getBestWindows(faces[i],img);
 			double total_entropy=0;
 			for(int j = 0 ; j<bestWindows.size() ; j++)
 				total_entropy += bestWindows[j].score;
@@ -62,7 +62,7 @@ public:
 			int total_darkness=0;
 			for(int j = 0 ; j<bestWindows.size() ; j++)
 			{
-				darkness_scores[j] = calcIrisDarknessScore(faces[i],img);
+				darkness_scores[j] = calcIrisDarknessScore(bestWindows[j].rect,img);
 				total_darkness += darkness_scores[j];
 			}
 
@@ -93,8 +93,8 @@ public:
 
 				}
 			}
-			Point2d left_iris = Point2d(best_left.rect.x+(best_left.rect.width/2.0, best_left.rect.y+(best_left.rect.height/2.0)));
-			Point2d right_iris = Point2d(best_right.rect.x+(best_right.rect.width/2.0, best_right.rect.y+(best_right.rect.height/2.0)));
+			Point2i left_iris = Point2i(best_left.rect.x+(best_left.rect.width/2.0, best_left.rect.y+(best_left.rect.height/2.0)));
+			Point2i right_iris = Point2i(best_right.rect.x+(best_right.rect.width/2.0, best_right.rect.y+(best_right.rect.height/2.0)));
 			iris.push_back(make_pair(left_iris,right_iris));
 		}	
 	}
@@ -117,7 +117,7 @@ private:
 			faces[i].height = faces[i].height/2;
 	}
 
-	vector<Window> &getBestWindows(const Rect &face, const Mat &img)
+	vector<Window> getBestWindows(const Rect &face, const Mat &img)
 	{
 		Mat croppedFace = img(face);
 		int d = face.width;
@@ -126,14 +126,16 @@ private:
 		const int deltaY = 1;
 		const int windowWidth = 2*r + deltaX;
 		const int windowHeight = 2*r + deltaY; 
+		const int stepx = 5;
+		const int stepy = 5;
 
 		priority_queue<Window> bestWindowsPQ;
 
-		for(int i = 0 ; i+windowHeight<croppedFace.rows ; i++)
-			for(int j = 0 ; j+windowWidth<croppedFace.cols ; j++)
+		for(int i = 0 ; i+windowHeight<croppedFace.rows ; i+=stepx)
+			for(int j = 0 ; j+windowWidth<croppedFace.cols ; j+=stepy)
 			{
 				Rect rect = Rect(j,i,windowWidth,windowHeight);
-				int intensity_sum;
+				int intensity_sum=0;
 				double score = calcEntropyScore(rect,croppedFace);
 				bestWindowsPQ.push(Window(rect,score,intensity_sum));
 				if(bestWindowsPQ.size()>WINDOWS_THRESHOLD)
@@ -154,21 +156,33 @@ private:
 				++colorFreq[interestImg.at<uchar>(i,j)];
 		double entropyVal = 0;
 		for(int i= 0 ; i<256 ; i++)
-			entropyVal += calcEntropy(i);
+			entropyVal += calcEntropy(i,crop_window);
 		return entropyVal;
 	}
 
-	double calcEntropy(int x)
+	double calcEntropy(int x, const Rect & crop_window)
 	{
-		double px = (double)colorFreq[x]/256.0;
+		double px = (double)colorFreq[x]/(double)(crop_window.width*crop_window.height);
 		return - px * (log(px)/log(2.0));
 	}
 
-	double calcIrisDarknessScore(const Rect & face, const Mat &img)
+	int squareDistance(Point2i from, Point2i to)
 	{
-		int d = face.width;
-		double r = (double)d/6.0;
+		return (from.x-to.x)*(from.x-to.x) + (from.y-to.y)*(from.y-to.y);
+	}
 
+	int calcIrisDarknessScore(const Rect &crop_window, const Mat &img)
+	{
+		int d = crop_window.width;
+		double r = (double)d/6.0;
+		int intensitySum=0;
+		Point2i center(crop_window.x + crop_window.width/2.0 , crop_window.y + crop_window.height/2.0);
+
+		for(int i = 0 ; i<crop_window.height ; i++)
+			for(int j = 0 ; j<crop_window.width ; j++)
+				if(squareDistance(center,Point2i(i,j))<= r*r)
+					intensitySum += img.at<uchar>(i,j);
+		return intensitySum;
 	}
 
 };
