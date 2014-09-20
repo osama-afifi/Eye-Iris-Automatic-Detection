@@ -1,8 +1,5 @@
-﻿/**
- * @file objectDetection.cpp
- * @author A. Huaman ( based in the classic facedetect.cpp in samples/c )
- * @brief A simplified version of facedetect.cpp, show how to load a cascade classifier and how to find objects (Face + eyes) in a video stream
- */
+﻿
+
 #include "opencv2/objdetect/objdetect.hpp"
 #include "opencv/cv.h"
 #include "opencv/highgui.h"
@@ -17,7 +14,6 @@
 using namespace std;
 using namespace cv;
 
-/** Function Headers */
 void detectAndDisplay( Mat frame );
 
 
