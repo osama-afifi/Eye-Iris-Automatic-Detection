@@ -20,11 +20,15 @@ private:
 	vector<Rect>faces;
 	int colorFreq[256 + 5];
 
-	#define WINDOWS_THRESHOLD 50
-	#define WINDOWVSFACERATIO (1.0/10.0)
-	#define UPPERCROPVAL 20.0
+	#define WINDOWS_THRESHOLD 100
+	#define WINDOWVSFACERATIO (1.0/9.0)
+	#define UPPERCROPVAL 25.0
 	#define SIDECROPVAL 8.0
-	#define LEFT_EYE_THRESHOLD 0.4
+	#define LEFT_EYE_THRESHOLD 0.35
+	#define STEPX 1
+	#define STEPY 1
+	#define DELTAX 3
+	#define DELTAY 1
 
 	struct Window
 	{
@@ -107,8 +111,8 @@ public:
 			Mat A = croppedFace(best_left.rect);
 			Mat B = croppedFace(best_right.rect);
 			
-			Point2i left_iris =  faces[i].tl()+best_left.rect.tl()+Point2i((best_left.rect.width/2.0, (best_left.rect.height/2.0)));
-			Point2i right_iris = faces[i].tl()+best_right.rect.tl()+Point2i((best_right.rect.width/2.0, (best_right.rect.height/2.0)));
+			Point2i left_iris  = faces[i].tl() + best_left.rect.tl() + Point2i(best_left.rect.width/2.0, best_left.rect.height/2.0);
+			Point2i right_iris = faces[i].tl() + best_right.rect.tl() + Point2i(best_right.rect.width/2.0, best_right.rect.height/2.0);
 			iris.push_back(make_pair(left_iris,right_iris));
 		}	
 	}
@@ -141,17 +145,14 @@ private:
 		Mat croppedFace = img(face);
 		double d = face.width;
 		double r = (double)d *(WINDOWVSFACERATIO);
-		const int deltaX = 3;
-		const int deltaY = 1;
-		const int windowWidth = 2*r + deltaX;
-		const int windowHeight = 2*r + deltaY; 
-		const int stepx = 3;
-		const int stepy = 3;
+		const int windowWidth = 2*r + DELTAX;
+		const int windowHeight = 2*r + DELTAY; 
+
 
 		priority_queue<Window> bestWindowsPQ;
 
-		for(int i = 0 ; i+windowHeight<croppedFace.rows ; i+=stepx)
-			for(int j = 0 ; j+windowWidth<croppedFace.cols ; j+=stepy)
+		for(int i = 0 ; i+windowHeight<croppedFace.rows ; i += STEPY)
+			for(int j = 0 ; j+windowWidth<croppedFace.cols ; j += STEPX)
 			{
 				Rect rect = Rect(j,i,windowWidth,windowHeight);
 				int intensity_sum=0;
@@ -198,7 +199,7 @@ private:
 		double d = crop_window.width;
 		double r = (double)d *(WINDOWVSFACERATIO);
 		int intensitySum=0;
-		Point2i center(/*crop_window.x + */crop_window.width/2.0 , /*crop_window.y + */crop_window.height/2.0);
+		Point2i center(crop_window.width/2.0 , crop_window.height/2.0);
 		Mat interestWindow = img(crop_window);
 		for(int i = 0 ; i<interestWindow.rows ; i++)
 			for(int j = 0 ; j<interestWindow.cols ; j++)

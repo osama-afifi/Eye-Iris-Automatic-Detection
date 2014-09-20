@@ -16,7 +16,6 @@ using namespace cv;
 
 void detectAndDisplay( Mat frame );
 
-
 string window_name = "Capture - Eye Iris detection";
 RNG rng(12345);
 
@@ -25,7 +24,7 @@ void Display( const vector<Rect> &rect, Mat &frame)
 	for( size_t i = 0; i < rect.size(); i++ )
     {
 		Point center( rect[i].x + rect[i].width/2, rect[i].y + rect[i].height/2 );
-	  rectangle(frame,rect[i],Scalar(255,0,0));
+		rectangle(frame,rect[i],Scalar(255,0,0));
 	  //ellipse( frame, center, Size( rect[i].width/2, rect[i].height/2), 0, 0, 360, Scalar( 255, 0, 255 ), 2, 8, 0 );
     }
    imshow( window_name, frame );
@@ -35,8 +34,8 @@ void Display( const vector< pair<Point2i,Point2i> > &iris, Mat &frame)
 {
 	for( size_t i = 0; i < iris.size(); i++ )
     {
-		ellipse( frame, iris[i].first , Size(10,10), 0, 0, 360, Scalar( 255, 0, 255 ), 2, 8, 0 );
-		ellipse( frame, iris[i].second , Size(10,10), 0, 0, 360, Scalar( 255, 0, 255 ), 2, 8, 0 );
+		circle( frame, iris[i].first , 5, Scalar(255,255,0));
+		circle( frame, iris[i].second, 5, Scalar(255,255,0));
     }
    imshow( window_name, frame );
 }
