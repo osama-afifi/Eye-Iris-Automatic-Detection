@@ -24,7 +24,7 @@ private:
 	#define WINDOWVSFACERATIO (1.0/9.0)
 	#define UPPERCROPVAL 25.0
 	#define SIDECROPVAL 8.0
-	#define LEFT_EYE_THRESHOLD 0.35
+	#define LEFT_EYE_THRESHOLD 0.40
 	#define STEPX 1
 	#define STEPY 1
 	#define DELTAX 3
