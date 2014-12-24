@@ -55,19 +55,23 @@ int main( void )
     {
       capture >> frame;
       //Apply the classifier to the frame
-	  myIrisDetector.ExtractIris(frame);
-	  faceExt.ExtractFaces(frame);
+	  myIrisDetector.ExtractIris(frame,true);
+	 // faceExt.ExtractFaces(frame);
 	  if( !frame.empty() )  
 	  {
-		  Display(myIrisDetector.iris, frame); 
-		  Display(faceExt.featureWindows, frame); 
+		  imshow( window_name, frame );
+		  //Display(myIrisDetector.iris, frame); 
+		  // Display(faceExt.featureWindows, frame); 
 	  }
       else { printf(" --(!) No captured frame -- Break!"); break; }
       int c = waitKey(10);
       if( (char)c == 'c' ) { break; }
+	  if( (char)c == 's')
+	  {
+		imwrite( "test.jpg", frame );
+	  }
 
     }
   }
   return 0;
 }
-

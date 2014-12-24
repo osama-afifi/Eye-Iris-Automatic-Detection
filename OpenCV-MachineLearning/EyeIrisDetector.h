@@ -8,6 +8,7 @@
 #include <iostream>
 #include <vector>
 #include <queue>
+#include <stdexcept>
 
 #include "CascadeFeatureExtractor.h"
 
@@ -19,12 +20,14 @@ class EyeIrisDetector
 private:
 	vector<Rect>faces;
 	int colorFreq[256 + 5];
-
+	Mat img;
+	
 	#define WINDOWS_THRESHOLD 100
-	#define WINDOWVSFACERATIO (1.0/9.0)
-	#define UPPERCROPVAL 25.0
-	#define SIDECROPVAL 8.0
-	#define LEFT_EYE_THRESHOLD 0.40
+	#define WINDOWVSFACERATIO (1.0/7.0)
+	#define UPPERCROPRATIO (1.0/3.0)
+	#define LOWERCROPRATIO (1.0/4.0)
+	#define SIDECROPRATIO (1.0/4.0)
+	#define LEFT_EYE_THRESHOLD 0.50
 	#define STEPX 1
 	#define STEPY 1
 	#define DELTAX 3
@@ -56,12 +59,13 @@ public:
 
 	vector< pair<Point2i,Point2i> >iris;
 
-	void ExtractIris(Mat &img)
+	void ExtractIris(Mat & _img, bool debugMode = false)
 	{
+		img = _img;
 		faces.clear();
 		cvtColor(img, img, CV_BGR2GRAY);
 		getFaces(img); //get face only in the image using viola and jones cascade classifier
-		cropUpper();
+		cropEyeRegion();
 		iris.clear();
 		for(int i = 0 ; i<1 && i<faces.size() ; i++)
 		{
@@ -88,7 +92,7 @@ public:
 				double Cscore = 1.0 - ((double)darkness_scores[j]/(double)total_darkness);
 				double Tscore = Hscore + Cscore;
 				// left eye window
-				if(bestWindows[j].rect.x < faces[i].width * LEFT_EYE_THRESHOLD)
+				if(bestWindows[j].rect.x + bestWindows[j].rect.width  <= (int)((double)faces[i].width * LEFT_EYE_THRESHOLD))
 				{
 					if(best_left.score<Tscore)
 					{
@@ -97,7 +101,7 @@ public:
 					}
 				}
 				// right eye window
-				else
+				else if(bestWindows[j].rect.x >= (int)((double)faces[i].width * LEFT_EYE_THRESHOLD))
 				{
 					if(best_right.score<Tscore)
 					{
@@ -114,7 +118,23 @@ public:
 			Point2i left_iris  = faces[i].tl() + best_left.rect.tl() + Point2i(best_left.rect.width/2.0, best_left.rect.height/2.0);
 			Point2i right_iris = faces[i].tl() + best_right.rect.tl() + Point2i(best_right.rect.width/2.0, best_right.rect.height/2.0);
 			iris.push_back(make_pair(left_iris,right_iris));
-		}	
+
+			// For Debugging Purposes
+			if(debugMode && faces.size())
+			{
+				rectangle(_img,faces[0],Scalar(255,0,0)); // eye region
+				rectangle(_img,Rect(faces[0].x,faces[0].y,faces[0].width*LEFT_EYE_THRESHOLD , faces[0].height),Scalar(255,0,0)); // LEFT_EYE_THRESHOLD
+				double d = best_left.rect.width;
+				double r = (double)d *(WINDOWVSFACERATIO); // eye radius calc
+				circle(_img, left_iris , r, Scalar(255,255,0)); //left eye
+				circle(_img, right_iris , r, Scalar(255,255,0)); // right eye
+				rectangle(_img, Rect(left_iris.x-best_left.rect.width/2,left_iris.y-best_left.rect.height/2,best_left.rect.size().width,best_left.rect.size().height), Scalar(255,0,0)); // left window
+				rectangle(_img, Rect(right_iris.x-best_right.rect.width/2,right_iris.y-best_right.rect.height/2,best_right.rect.size().width,best_right.rect.size().height), Scalar(255,0,0)); // right window
+			}
+
+		}
+
+
 	}
 
 
@@ -129,14 +149,15 @@ private:
 			faces.push_back(faceCascade.featureWindows[i]);
 	}
 
-	void cropUpper()
+	void cropEyeRegion()
 	{
 		for(int i = 0 ; i<faces.size() ; i++)
 		{
 			faces[i].height = faces[i].height/2.0;
-			faces[i].y += UPPERCROPVAL;
-			faces[i].x += SIDECROPVAL;
-			faces[i].width -= SIDECROPVAL;
+			faces[i].y += (int)(UPPERCROPRATIO*(double)faces[i].height);
+			faces[i].height -= (int)(LOWERCROPRATIO*(double)faces[i].height);
+			faces[i].width -= (int)(SIDECROPRATIO*(double)faces[i].width);
+			faces[i].x += (int)(SIDECROPRATIO*0.65*(double)faces[i].width);
 		}
 	}
 
@@ -144,26 +165,42 @@ private:
 	{
 		Mat croppedFace = img(face);
 		double d = face.width;
-		double r = (double)d *(WINDOWVSFACERATIO);
+		double r = toRadius(d);
 		const int windowWidth = 2*r + DELTAX;
 		const int windowHeight = 2*r + DELTAY; 
 
 
-		priority_queue<Window> bestWindowsPQ;
+		priority_queue<Window> bestLeftWindowsPQ;
+		priority_queue<Window> bestRightWindowsPQ;
 
 		for(int i = 0 ; i+windowHeight<croppedFace.rows ; i += STEPY)
 			for(int j = 0 ; j+windowWidth<croppedFace.cols ; j += STEPX)
 			{
 				Rect rect = Rect(j,i,windowWidth,windowHeight);
 				int intensity_sum=0;
-				double score = calcEntropyScore(rect,croppedFace);
-				bestWindowsPQ.push(Window(rect,score,intensity_sum));
-				if(bestWindowsPQ.size()>WINDOWS_THRESHOLD)
-					bestWindowsPQ.pop();
+				int splitCol = (int)((double)croppedFace.size().width*LEFT_EYE_THRESHOLD);
+				if(rect.x+rect.width <= splitCol)
+				{
+								double score = calcEntropyScore(rect,croppedFace);
+								bestLeftWindowsPQ.push(Window(rect,score,intensity_sum));
+								if(bestLeftWindowsPQ.size()>WINDOWS_THRESHOLD)
+								bestLeftWindowsPQ.pop();
+				}
+				else if(rect.x >= splitCol)
+				{
+								double score = calcEntropyScore(rect,croppedFace);
+								bestRightWindowsPQ.push(Window(rect,score,intensity_sum));
+								if(bestRightWindowsPQ.size()>WINDOWS_THRESHOLD)
+								bestRightWindowsPQ.pop();
+				}
+
+
 			}
 			vector<Window> ret;
-			while(!bestWindowsPQ.empty())
-				ret.push_back(bestWindowsPQ.top()), bestWindowsPQ.pop();
+			while(!bestLeftWindowsPQ.empty())
+				ret.push_back(bestLeftWindowsPQ.top()), bestLeftWindowsPQ.pop();
+			while(!bestRightWindowsPQ.empty())
+				ret.push_back(bestRightWindowsPQ.top()), bestRightWindowsPQ.pop();
 			return ret;
 	}
 
@@ -194,10 +231,20 @@ private:
 		return ((from.x-to.x)*(from.x-to.x) + (from.y-to.y)*(from.y-to.y));
 	}
 
+	__inline double toRadius(double faceWidth)
+	{
+		 return (double)faceWidth *(WINDOWVSFACERATIO)*1.0;
+	}
+
+		__inline double toWindow(double radius)
+	{
+		 return radius*1.5;
+	}
+
 	int calcIrisDarknessScore(const Rect &crop_window, const Mat &img)
 	{
 		double d = crop_window.width;
-		double r = (double)d *(WINDOWVSFACERATIO);
+		double r = toRadius(d);
 		int intensitySum=0;
 		Point2i center(crop_window.width/2.0 , crop_window.height/2.0);
 		Mat interestWindow = img(crop_window);
