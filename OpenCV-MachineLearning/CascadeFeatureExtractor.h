@@ -33,7 +33,7 @@ public:
 		featureWindows.clear();
 		Mat img_gray;
 		//cvtColor(img, img_gray, COLOR_BGR2GRAY );
-		// equalizeHist( img_gray, img_gray );
+		//equalizeHist( img_gray, img_gray );
 		cascade.detectMultiScale(img, featureWindows, 1.1, 2, 0|CV_HAAR_SCALE_IMAGE, dim);
 	}
 };

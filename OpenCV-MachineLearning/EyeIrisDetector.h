@@ -22,7 +22,7 @@ private:
 	int colorFreq[256 + 5];
 	Mat img;
 	
-	#define WINDOWS_THRESHOLD 100
+	#define WINDOWS_THRESHOLD 150
 	#define WINDOWVSFACERATIO (1.0/7.0)
 	#define WINDOWVSRADIUS 2.0
 	#define UPPERCROPRATIO (1.0/3.0)
@@ -66,6 +66,7 @@ public:
 		img = _img;
 		faces.clear();
 		cvtColor(img, img, CV_BGR2GRAY);
+		equalizeHist( img, img );
 		getFaces(img); //get face only in the image using viola and jones
 		cropEyeRegion(); // crop useless area
 		iris.clear();
@@ -128,7 +129,7 @@ public:
 				rectangle(_img,faces[i],Scalar(0,255,0)); // eye region
 				double d = best_left.rect.width;
 				double r = (double)d *(WINDOWVSFACERATIO); // eye radius calc
-				ellipse(_img, left_iris , r, Scalar(255,255,0)); //left eye
+				circle(_img, left_iris , r, Scalar(255,255,0)); //left eye
 				circle(_img, right_iris , r, Scalar(255,255,0)); // right eye
 				rectangle(_img, Rect(left_iris.x-best_left.rect.width/2,left_iris.y-best_left.rect.height/2,best_left.rect.size().width,best_left.rect.size().height), Scalar(255,0,0)); // left window
 				rectangle(_img, Rect(right_iris.x-best_right.rect.width/2,right_iris.y-best_right.rect.height/2,best_right.rect.size().width,best_right.rect.size().height), Scalar(255,0,0)); // right window

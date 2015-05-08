@@ -46,7 +46,10 @@ int main( void )
   VideoCapture capture;
   Mat frame;
   EyeIrisDetector myIrisDetector;
-  CascadeFeatureExtractor faceExt("D:\\Osama\\Programming\\OpenCV\\opencv\\sources\\data\\haarcascades\\haarcascade_frontalface_alt.xml");
+  //CascadeFeatureExtractor faceExt("D:\\Osama\\Programming\\OpenCV\\opencv\\sources\\data\\haarcascades\\haarcascade_frontalface_alt.xml");
+	CascadeClassifier profilefaceCascade;
+
+if( !profilefaceCascade.load( "D:\\Osama\\Programming\\OpenCV\\opencv\\sources\\data\\haarcascades\\haarcascade_mcs_eyepair_small.xml" ) ){ printf("--(!)Error loading\n"); };
 
   capture.open( 0 );
   if( capture.isOpened() )
@@ -55,17 +58,21 @@ int main( void )
     {
       capture >> frame;
       //Apply the classifier to the frame
-	  myIrisDetector.ExtractIris(frame,true);
+	  myIrisDetector.ExtractIris(frame, true);
 	 // faceExt.ExtractFaces(frame);
+	  	vector<Rect> profilefaceRect;
 	  if( !frame.empty() )  
 	  {
-		  imshow( window_name, frame );
+		  profilefaceCascade.detectMultiScale(frame, profilefaceRect, 1.1, 2, 0|CV_HAAR_SCALE_IMAGE);
+		  Display(profilefaceRect, frame);
+		  //imshow( window_name, frame );
+		  
 		  //Display(myIrisDetector.iris, frame); 
 		  // Display(faceExt.featureWindows, frame); 
 	  }
       else { printf(" --(!) No captured frame -- Break!"); break; }
       int c = waitKey(10);
-      if( (char)c == 'c' ) { break; }
+      if( (char)c == 'c') { break; }
 	  if( (char)c == 's')
 	  {
 		imwrite( "test.jpg", frame );
